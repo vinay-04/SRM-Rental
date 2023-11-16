@@ -1,35 +1,25 @@
-from time import strftime, sleep
+from time import strftime, sleep, time
 import os
 import flet
 from flet import *
 from flet.auth.providers import GoogleOAuthProvider
+import requests
 
 PAGE_TITLE = "Rental Resource Management System"
 
 provider = GoogleOAuthProvider(
-    client_id="id",
-    client_secret="secret",
+    client_id="510860766543-qq5c159h5u7j5dcuebi248sl5dvim66c.apps.googleusercontent.com",
+    client_secret="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",
     redirect_url="http://localhost:8550/api/oauth/redirect",
 )
 
-data = [
-    {
-        "name": "Harsh",
-        "product_name": "item1",
-        "price": 5905,
-        "email": "hp8823@srmist.edu.in",
-        "rented": True,
-        "time_added": "14th Nov",
-    },
-    {
-        "name": "sone",
-        "product_name": "item1",
-        "price": 5905,
-        "email": "sone@srmist.edu.in",
-        "rented": False,
-        "time_added": "5th Nov",
-    },
-]
+
+def get_data():
+    response = requests.get("http://127.0.0.1:8000/get_data")
+    return response.json().get("data")
+
+
+data = get_data()
 
 
 def main(page: Page):
@@ -44,7 +34,7 @@ def main(page: Page):
     page.padding = 50
     t = Tabs(
         selected_index=0,
-        animation_duration=300,
+        animation_duration=0,
         tabs=[
             Tab(
                 text="Items",
@@ -74,11 +64,12 @@ def main(page: Page):
         sleep(1)
         email = login_page.email
         name = login_page.uname
-        print(email, name)
+
         wait_count -= 1
         if wait_count == 0:
             login_page.login_button_click(None)
 
+    print(email, name)
     t.tabs[1].content = my_RRMSAPP(page, email, name, t)
     page.update()
 
@@ -90,12 +81,14 @@ def main(page: Page):
 
 
 def fetch_data(forme: bool = False, email: str = None):
+    data = get_data()
     column = [
-        DataColumn(Text("Name")),
+        DataColumn(Text("User Name")),
         DataColumn(Text("Product Name")),
         DataColumn(Text("Price")),
+        DataColumn(Text("Phone No")),
         DataColumn(Text("Email")),
-        DataColumn(Text("Rented")),
+        DataColumn(Text("Availability")),
         DataColumn(Text("Time Added")),
     ]
     row = []
@@ -106,11 +99,14 @@ def fetch_data(forme: bool = False, email: str = None):
             row.append(
                 DataRow(
                     [
-                        DataCell(Text(i["name"])),
+                        DataCell(Text(i["username"])),
                         DataCell(Text(i["product_name"])),
                         DataCell(Text(i["price"])),
+                        DataCell(Text(i["phone"])),
                         DataCell(Text(i["email"])),
-                        DataCell(Text("Not Available" if i["rented"] else "Available")),
+                        DataCell(
+                            Text("Available" if i["availability"] else "Not Available")
+                        ),
                         DataCell(Text(i["time_added"])),
                     ]
                 )
@@ -121,13 +117,16 @@ def fetch_data(forme: bool = False, email: str = None):
             row.append(
                 DataRow(
                     [
-                        DataCell(Text(i["name"])),
+                        DataCell(Text(i["username"])),
                         DataCell(Text(i["product_name"])),
                         DataCell(Text(i["price"])),
+                        DataCell(Text(i["phone"])),
                         DataCell(Text(i["email"])),
-                        DataCell(Text("Not Available" if i["rented"] else "Available")),
+                        DataCell(
+                            Text("Available" if i["availability"] else "Not Available")
+                        ),
                         DataCell(Text(i["time_added"])),
-                    ]
+                    ],
                 )
             )
 
@@ -145,6 +144,7 @@ class my_RRMSAPP(UserControl):
     def build(self):
         self.ItemName = TextField(hint_text="Item Name", expand=True)
         self.ItemPrice = TextField(hint_text="Item Price", expand=True)
+        self.PhoneNo = TextField(hint_text="Phone No", expand=True)
 
         self.tasks = Column()
         self.data = fetch_data(True, self.email)
@@ -155,6 +155,7 @@ class my_RRMSAPP(UserControl):
                         controls=[
                             self.ItemName,
                             self.ItemPrice,
+                            self.PhoneNo,
                             FloatingActionButton(
                                 icon=icons.ADD, on_click=self.add_clicked
                             ),
@@ -179,14 +180,17 @@ class my_RRMSAPP(UserControl):
         print("clicked")
 
         task = {
-            "name": self.name,
+            "username": self.name,
             "product_name": self.ItemName.value,
             "price": self.ItemPrice.value,
             "email": self.email,
-            "rented": False,
-            "time_added": strftime("%m-%d %H:%M"),
+            "availability": True,
+            "phone": self.PhoneNo.value,
+            "time_added": time(),
         }
-        data.append(task)
+        res = requests.post(
+            f"http://127.0.0.1:8000/insert_data?username={task['username']}&product_name={task['product_name']}&price={task['price']}&email={task['email']}&availability={task['availability']}&phone={task['phone']}"
+        )
         self.t.tabs[1].content = my_RRMSAPP(self.page, self.email, self.name, self.t)
 
     def task_delete(self, task):
@@ -276,5 +280,6 @@ class LoginPage:
         self.logout_button.visible = False
         self.page.tabs.visible = False  # Hide the tabs on logout
         self.page.update()
+
 
 flet.app(target=main, port=8550, view=flet.WEB_BROWSER)
