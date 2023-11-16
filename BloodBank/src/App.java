@@ -10,7 +10,7 @@ public class App extends JFrame {
     static final String JDBC_DRIVER = "com.mysql.cj.jdbc.Driver";
     static final String DB_URL = "jdbc:mysql://localhost:3306/BloodBank";
     static final String USER = "root";
-    static final String PASS = "Abdmsdvk#123";
+    static final String PASS = "PASSWORD";
 
     public App() {
         super("Blood Bank Management System");
